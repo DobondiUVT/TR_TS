@@ -34,4 +34,8 @@ export class Substitution {
             .map(([k, v]) => `${k} → ${v.toString()}`)
             .join(', ') + '}';
     }
+
+    isRenaming(): boolean {
+        return this.map.size === 1 && (this.map.values().next().value?.isVariable ?? false);
+    }
 }

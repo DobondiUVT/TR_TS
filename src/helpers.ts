@@ -1,5 +1,6 @@
 import { Substitution } from "./substitution";
 import { Term, VariableTerm } from "./term";
+import { Equation, Unifier } from "./unify";
 
 // Helper: Collect all variable names in a term
 function collectVariables(term: Term, vars = new Set<string>()) {
@@ -88,4 +89,54 @@ function applySubstitution(term: Term, subst: Substitution): Term {
     return term;
 }
 
-export { collectVariables, renameVariables, invertMapping, revertRenaming, getNonVariablePositions, getSubtermAt, replaceSubterm, applySubstitution };
+function reduceToNormalForm(term: Term, rules: Equation[]): Term {
+    let current = term;
+    let changed = true;
+    
+    // Keep applying rules until no more changes occur
+    while (changed) {
+        changed = false;
+        current = reduceOneStep(current, rules);
+        // If reduceOneStep returns a different term, we made progress
+        if (current.toString() !== term.toString()) {
+            changed = true;
+            term = current;
+        }
+    }
+    
+    return current;
+}
+
+function reduceOneStep(term: Term, rules: Equation[]): Term {
+    // Try to apply each rule at the root
+    for (const rule of rules) {
+        const unifier = new Unifier([{ left: term, right: rule.left }]);
+        if (unifier.unify()) {
+            const substitution = unifier.getSubstitution();
+            return applySubstitution(rule.right, substitution);
+        }
+    }
+    
+    // If no rule applies at root, try to reduce subterms
+    if (term.name && term.args && term.args.length > 0) {
+        const reducedArgs = term.args.map(arg => reduceOneStep(arg, rules));
+        // Check if any argument was reduced
+        const argsChanged = reducedArgs.some((arg, i) => arg.toString() !== term.args![i].toString());
+        if (argsChanged) {
+            return Term.create(term.name, reducedArgs);
+        }
+    }
+    
+    // No reduction possible
+    return term;
+}
+
+function areTwoTermsEqualOrRenamed(term1: Term, term2: Term): [boolean, Substitution] {
+    const unifier = new Unifier([{ left: term1, right: term2 }]);
+    const unify = unifier.unify();
+    const substitution = unifier.getSubstitution();
+    const verdict = unify && substitution.isRenaming();
+    return [verdict, substitution];
+}
+
+export { collectVariables, renameVariables, invertMapping, revertRenaming, getNonVariablePositions, getSubtermAt, replaceSubterm, applySubstitution, reduceToNormalForm, areTwoTermsEqualOrRenamed };

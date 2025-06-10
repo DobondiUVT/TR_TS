@@ -1,8 +1,28 @@
-export const CONFIG = {
-    constantsRegex: /^[abc01]$/,
+export const TERM_RULES = {
     variablesRegex: /^[xyz](\d+)?$/,
     functions: {
-        "f": 2,
-        "g": 1,
+        "*": 2,
+        "i": 1,
+    },
+    constants: {
+      "1": 0,
     },
 } as const;
+
+export const ORDERING_RULES = {
+    weights: {
+      variables: 1,
+      functions: {
+        "*": 1,
+        "i": 1,
+      },
+      constants: {
+        "1": 1,
+      }
+    },
+    precedence: {
+      "i": 2,
+      "*": 3,
+      "1": 4,
+    },
+  }

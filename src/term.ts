@@ -1,4 +1,4 @@
-import { CONFIG } from "./config";
+import { TERM_RULES } from "./config";
 
 export abstract class Term {
     constructor(public readonly name: string, public readonly args: Term[] = []) {}
@@ -9,14 +9,14 @@ export abstract class Term {
     abstract toString(): string;
 
     static create(name: string, args: Term[] = []): Term {
-        if (CONFIG.constantsRegex.test(name)) {
+        if (name in TERM_RULES.constants) {
             return new ConstantTerm(name);
         }
-        if (CONFIG.variablesRegex.test(name)) {
+        if (TERM_RULES.variablesRegex.test(name)) {
             return new VariableTerm(name);
         }
-        if (name in CONFIG.functions) {
-            return new FunctionTerm(name as keyof typeof CONFIG.functions, args);
+        if (name in TERM_RULES.functions) {
+            return new FunctionTerm(name as keyof typeof TERM_RULES.functions, args);
         }
         throw new Error(`Invalid term name: ${name}`);
     }
@@ -24,15 +24,15 @@ export abstract class Term {
 
 export class FunctionTerm extends Term {
     constructor(
-        name: keyof typeof CONFIG.functions,
+        name: keyof typeof TERM_RULES.functions,
         args: Term[]
     ) {
         super(name, args);
-        if (!(name in CONFIG.functions)) {
+        if (!(name in TERM_RULES.functions)) {
             throw new Error(`Invalid function name: ${name}`);
         }
-        if (CONFIG.functions[name] !== args.length) {
-            throw new Error(`Invalid number of arguments for function ${name}`);
+        if (TERM_RULES.functions[name] !== args.length) {
+            throw new Error(`Invalid number of arguments for function ${name}, expected ${TERM_RULES.functions[name]}, got ${args.length}`);
         }
     }
 
@@ -49,6 +49,9 @@ export class FunctionTerm extends Term {
     }
 
     toString(): string {
+        if (this.name === "*") {
+            return `(${this.args[0].toString()} ${this.name} ${this.args[1].toString()})`;
+        }
         return `${this.name}(${this.args.map(arg => arg.toString()).join(', ')})`;
     }
 }
@@ -56,7 +59,7 @@ export class FunctionTerm extends Term {
 export class VariableTerm extends Term {
     constructor(name: string) {
         super(name);
-        if (!CONFIG.variablesRegex.test(name)) {
+        if (!TERM_RULES.variablesRegex.test(name)) {
             throw new Error(`Invalid variable name: ${name}`);
         }
     }
@@ -81,7 +84,7 @@ export class VariableTerm extends Term {
 export class ConstantTerm extends Term {
     constructor(name: string) {
         super(name);
-        if (!CONFIG.constantsRegex.test(name)) {
+        if (!(name in TERM_RULES.constants)) {
             throw new Error(`Invalid constant name: ${name}`);
         }
     }

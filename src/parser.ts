@@ -1,4 +1,4 @@
-import { CONFIG } from './config';
+import { TERM_RULES } from './config';
 import { Term } from './term';
 
 export class Parser {
@@ -23,7 +23,7 @@ export class Parser {
 
     private parseFunctionCall(): Term {
         const name = this.advance();
-        if (!(name in CONFIG.functions)) {
+        if (!(name in TERM_RULES.functions)) {
             throw new Error(`Invalid function name: ${name}`);
         }
 
@@ -58,7 +58,7 @@ export class Parser {
         while (!this.isEnd() && /^\d$/.test(this.peek())) {
             varName += this.advance();
         }
-        if (!CONFIG.variablesRegex.test(varName)) {
+        if (!TERM_RULES.variablesRegex.test(varName)) {
             throw new Error(`Invalid variable name: ${varName}`);
         }
         return Term.create(varName);
@@ -67,13 +67,13 @@ export class Parser {
     private parseTerm(): Term {
         const char = this.peek();
         
-        if (CONFIG.constantsRegex.test(char)) {
+        if (TERM_RULES.constantsRegex.test(char)) {
             return Term.create(this.advance());
         }
-        if (CONFIG.variablesRegex.test(char)) {
+        if (TERM_RULES.variablesRegex.test(char)) {
             return this.parseVariable();
         }
-        if (char in CONFIG.functions) {
+        if (char in TERM_RULES.functions) {
             return this.parseFunctionCall();
         }
         
