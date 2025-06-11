@@ -1,24 +1,24 @@
 # Completed Rule System
 
-((x * y) * z) -> (x * (y * z)) ✅
-(x * i(x)) -> 1 ✅
-(1 * x) -> x ✅
-(x * (i(x) * z)) -> z ✅
+(x * y) * z -> x * (y * z) ✅
+x * i(x) -> 1 ✅
+1 * x -> x ✅
+x * (i(x) * z) -> z ✅
 i(1) -> 1 ✅
-i(i(x)) -> (x * 1)
-(i(x) * (x * z)) -> z ✅
-i((x * 1)) -> i(x)
-i((x * (x * 1))) -> i((x * x))
-(i(x) * 1) -> i(x)
-(y * i((x * y))) -> i(x)
-(y * (i((x * y)) * z)) -> (i(x) * z)
-(i(y) * i(x)) -> i((x * y)) ✅
-(i(y) * (i(x) * z)) -> (i((x * y)) * z)
-(z * i((x * (y * z)))) -> i((x * y))
-i((x * (y * i(x)))) -> (x * i((x * y)))
-i((x * (i(y) * y))) -> i(x)
-(i((x * y)) * (x * z)) -> (i(y) * z)
-i((i(x) * y)) -> (i(y) * (x * 1))
-i((x * (x * (x * 1)))) -> i((x * (x * x)))
-i((x * i(y))) -> (y * i(x))
-i((y * (i(x) * y))) -> (i(y) * (x * i(y)))
+i(i(x)) -> x * 1
+i(x) * (x * z) -> z ✅
+i(x * 1) -> i(x)
+i(x * (x * 1)) -> i(x * x)
+i(x) * 1 -> i(x)
+y * i(x * y) -> i(x)
+y * (i(x * y) * z) -> i(x) * z
+i(y) * i(x) -> i(x * y) ✅
+i(y) * (i(x) * z) -> i(x * y) * z
+z * i(x * (y * z)) -> i(x * y)
+i(x * (y * i(x))) -> x * i(x * y)
+i(x * (i(y) * y)) -> i(x)
+i(x * y) * (x * z) -> i(y) * z
+i(i(x) * y) -> i(y) * (x * 1)
+i(x * (x * (x * 1))) -> i(x * (x * x))
+i(x * i(y)) -> y * i(x)
+i(y * (i(x) * y)) -> i(y) * (x * i(y))

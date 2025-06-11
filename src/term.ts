@@ -1,4 +1,4 @@
-import { TERM_RULES } from "./config";
+import { TERM_RULES, ORDERING_RULES } from "./config";
 
 export abstract class Term {
     constructor(public readonly name: string, public readonly args: Term[] = []) {}
@@ -6,7 +6,7 @@ export abstract class Term {
     abstract get isConstant(): boolean;
     abstract get isVariable(): boolean;
     abstract get isFunction(): boolean;
-    abstract toString(): string;
+    abstract toString(parentPrecedence?: number): string;
 
     static create(name: string, args: Term[] = []): Term {
         if (name in TERM_RULES.constants) {
@@ -48,10 +48,22 @@ export class FunctionTerm extends Term {
         return true;
     }
 
-    toString(): string {
-        if (this.name === "*") {
-            return `(${this.args[0].toString()} ${this.name} ${this.args[1].toString()})`;
+    toString(parentPrecedence = 0): string {
+        const funcDef = TERM_RULES.functions[this.name as keyof typeof TERM_RULES.functions];
+        // @ts-ignore
+        const precedence = ORDERING_RULES.precedence[this.name];
+
+        if ('infix' in funcDef && funcDef.infix) {
+            const leftStr = this.args[0].toString(precedence);
+            const rightStr = this.args[1].toString(precedence + 1); // For left-associativity
+            const s = `${leftStr} ${this.name} ${rightStr}`;
+            
+            if (precedence <= parentPrecedence) {
+                return `(${s})`;
+            }
+            return s;
         }
+
         return `${this.name}(${this.args.map(arg => arg.toString()).join(', ')})`;
     }
 }
@@ -76,7 +88,7 @@ export class VariableTerm extends Term {
         return false;
     }
 
-    toString(): string {
+    toString(parentPrecedence = 0): string {
         return this.name;
     }
 }
@@ -101,7 +113,7 @@ export class ConstantTerm extends Term {
         return false;
     }
 
-    toString(): string {
+    toString(parentPrecedence = 0): string {
         return this.name;
     }
 }
