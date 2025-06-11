@@ -22,7 +22,7 @@ export const ORDERING_RULES = {
     },
     precedence: {
       "1": 1,
-      "i": 2,
-      "*": 3,
+      "*": 2,
+      "i": 3,
     },
   }

@@ -3,6 +3,7 @@ import { Equation } from "../unify";
 import { CriticalPairFinder, CriticalPair } from "../critical";
 import { areTwoTermsEqualOrRenamed, applySubstitution, reduceToNormalForm, getTermComplexity } from "../helpers";
 import { KnuthBendixOrdering } from "../knuth";
+import * as fs from 'fs';
 
 const MAX_TERM_COMPLEXITY = 8;
 
@@ -176,10 +177,15 @@ export class HuetCompletion {
     public checkIfRulesContainSystem(system: Equation[]): void {
         console.log("\n--- Checking System Coverage ---");
         for (const sysRule of system) {
-            if (this.rules.some(rule => rule.left.toString() === sysRule.left.toString() && rule.right.toString() === sysRule.right.toString())) {
+            const leftNormal = reduceToNormalForm(sysRule.left, this.rules);
+            const rightNormal = reduceToNormalForm(sysRule.right, this.rules);
+
+            if (leftNormal.toString() === rightNormal.toString()) {
                 console.log(`Rule ${sysRule.left.toString()} -> ${sysRule.right.toString()} ✅`);
             } else {
                 console.log(`Rule ${sysRule.left.toString()} -> ${sysRule.right.toString()} ❌`);
+                console.log(`   ${sysRule.left.toString()} reduces to ${leftNormal.toString()}`);
+                console.log(`   ${sysRule.right.toString()} reduces to ${rightNormal.toString()}`);
             }
         }
     }
@@ -249,6 +255,64 @@ const huet = new HuetCompletion(equations);
 const completedRules = huet.complete();
 // console.log('Completed rules:', completedRules.map(eq => eq.left.toString() + ' -> ' + eq.right.toString()));
 huet.checkIfRulesContainSystem(system);
+
+function toCanonicalRuleString(rule: Equation): string {
+    const varMap = new Map<string, string>();
+    let varCount = 0;
+
+    function canonicalizeTerm(term: Term): string {
+        if (term.isVariable) {
+            if (!varMap.has(term.name)) {
+                varMap.set(term.name, `v${varCount++}`);
+            }
+            return varMap.get(term.name)!;
+        }
+        if (term.isConstant) {
+            return term.name;
+        }
+        if (term.isFunction) {
+            return `${term.name}(${term.args.map(canonicalizeTerm).join(', ')})`;
+        }
+        return '';
+    }
+    
+    const left = canonicalizeTerm(rule.left);
+    varMap.clear();
+    varCount = 0;
+    const right = canonicalizeTerm(rule.right);
+    
+    return `${left} -> ${right}`;
+}
+
+// --- Write to file ---
+try {
+    const canonicalSystemRules = new Set(system.map(rule => {
+        // Add both normal and inverse canonical forms
+        const normal = toCanonicalRuleString(rule);
+        const inverse = toCanonicalRuleString({ left: rule.right, right: rule.left });
+        return [normal, inverse];
+    }).flat());
+
+    let fileOutput = "# Completed Rule System\n\n";
+
+    const uniqueRules = completedRules.filter((rule, index, self) =>
+        index === self.findIndex((r) => (
+            r.left.toString() === rule.left.toString() && r.right.toString() === rule.right.toString()
+        ))
+    );
+
+    for (const rule of uniqueRules) {
+        const ruleString = `${rule.left.toString()} -> ${rule.right.toString()}`;
+        const canonicalRule = toCanonicalRuleString(rule);
+        const checkmark = canonicalSystemRules.has(canonicalRule) ? ' ✅' : '';
+        fileOutput += `${ruleString}${checkmark}\n`;
+    }
+
+    fs.writeFileSync('completed_system.txt', fileOutput);
+    console.log('\nSuccessfully wrote the completed system to completed_system.txt');
+} catch (error) {
+    console.error('\nFailed to write system to file:', error);
+}
 
 
 
