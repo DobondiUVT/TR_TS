@@ -1,89 +1,113 @@
-import { TERM_RULES } from './config';
+import { TERM_RULES, ORDERING_RULES } from './config';
 import { Term } from './term';
 
 export class Parser {
     private pos: number = 0;
-    private input: string;
+    private tokens: string[];
 
     constructor(input: string) {
-        this.input = input.replace(/\s+/g, '');
+        this.tokens = this.tokenize(input);
+    }
+
+    private tokenize(input: string): string[] {
+        // A simple tokenizer that handles identifiers, numbers, and symbols
+        const regex = /([a-zA-Z_][\w]*|[0-9]+|[*(),])/g;
+        const tokens = input.match(regex) || [];
+        // console.log(`Tokens for '${input}':`, tokens);
+        return tokens;
     }
 
     private peek(): string {
-        return this.input[this.pos];
+        return this.tokens[this.pos];
     }
 
     private advance(): string {
-        return this.input[this.pos++];
+        return this.tokens[this.pos++];
     }
 
     private isEnd(): boolean {
-        return this.pos >= this.input.length;
+        return this.pos >= this.tokens.length;
     }
 
-    private parseFunctionCall(): Term {
-        const name = this.advance();
-        if (!(name in TERM_RULES.functions)) {
-            throw new Error(`Invalid function name: ${name}`);
+    private getInfixPrecedence(token: string): number {
+        if (!token) return 0;
+        const funcDef = TERM_RULES.functions[token as keyof typeof TERM_RULES.functions];
+        if (funcDef && 'infix' in funcDef && funcDef.infix) {
+            return ORDERING_RULES.precedence[token as keyof typeof ORDERING_RULES.precedence] || 0;
+        }
+        return 0;
+    }
+
+    // NUD (Null Denotation): for variables, constants, prefix operators, parentheses
+    private parseNud(): Term {
+        const token = this.advance();
+
+        if (token === '(') {
+            const expr = this.parseExpression(0);
+            if (this.advance() !== ')') {
+                throw new Error("Expected ')' to close parenthesis group");
+            }
+            return expr;
+        }
+        
+        if (token in TERM_RULES.constants) {
+            return Term.create(token);
         }
 
-        if (this.advance() !== '(') {
-            throw new Error(`Expected '(' after function name ${name}`);
+        if (TERM_RULES.variablesRegex.test(token)) {
+            return Term.create(token);
         }
 
-        const args: Term[] = [];
-        while (true) {
-            args.push(this.parseTerm());
+        const funcRule = TERM_RULES.functions[token as keyof typeof TERM_RULES.functions];
+
+        if (funcRule && (!('infix' in funcRule) || !funcRule.infix)) {
+            if (this.peek() !== '(') {
+                throw new Error(`Expected '(' after prefix function ${token}`);
+            }
+            this.advance();
+
+            const args: Term[] = [];
+            if (funcRule.arity > 0) {
+                 while (true) {
+                    args.push(this.parseExpression(0));
+                    if (this.peek() === ')') break;
+                    if (this.peek() !== ',') throw new Error(`Expected ',' or ')' in arguments of ${token}`);
+                    this.advance();
+                 }
+            }
+
+            if(args.length !== funcRule.arity) throw new Error(`Expected ${funcRule.arity} args for ${token}, but got ${args.length}`);
             
-            const next = this.peek();
-            if (next === ')') {
-                this.advance();
-                break;
+            if (this.advance() !== ')') {
+                throw new Error(`Expected ')' to close function call for ${token}`);
             }
-            if (next === ',') {
-                this.advance();
-                continue;
-            }
-            if (this.isEnd()) {
-                throw new Error(`Unexpected characters after term: `);
-            }
-            throw new Error(`Expected ',' or ')' but got ${next}`);
+
+            return Term.create(token, args);
         }
 
-        return Term.create(name, args);
+        throw new Error(`Unexpected token: ${token}`);
     }
 
-    private parseVariable(): Term {
-        let varName = this.advance();
-        while (!this.isEnd() && /^\d$/.test(this.peek())) {
-            varName += this.advance();
-        }
-        if (!TERM_RULES.variablesRegex.test(varName)) {
-            throw new Error(`Invalid variable name: ${varName}`);
-        }
-        return Term.create(varName);
+    // LED (Left Denotation): for infix operators
+    private parseLed(left: Term): Term {
+        const token = this.advance(); // The infix operator
+        const precedence = this.getInfixPrecedence(token);
+        const right = this.parseExpression(precedence);
+        return Term.create(token, [left, right]);
     }
-
-    private parseTerm(): Term {
-        const char = this.peek();
-        
-        if (TERM_RULES.constantsRegex.test(char)) {
-            return Term.create(this.advance());
+    
+    private parseExpression(precedence: number): Term {
+        let left = this.parseNud();
+        while (!this.isEnd() && precedence < this.getInfixPrecedence(this.peek())) {
+            left = this.parseLed(left);
         }
-        if (TERM_RULES.variablesRegex.test(char)) {
-            return this.parseVariable();
-        }
-        if (char in TERM_RULES.functions) {
-            return this.parseFunctionCall();
-        }
-        
-        throw new Error(`Unexpected character: ${char}`);
+        return left;
     }
 
     parse(): Term {
-        const term = this.parseTerm();
+        const term = this.parseExpression(0);
         if (!this.isEnd()) {
-            throw new Error(`Unexpected characters after term: ${this.input.slice(this.pos)}`);
+            throw new Error(`Unexpected characters after term: ${this.tokens.slice(this.pos).join(' ')}`);
         }
         return term;
     }

@@ -1,8 +1,8 @@
 export const TERM_RULES = {
     variablesRegex: /^[xyz](\d+)?$/,
     functions: {
-        "*": 2,
-        "i": 1,
+        "*": { arity: 2, infix: true },
+        "i": { arity: 1 },
     },
     constants: {
       "1": 0,

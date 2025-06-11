@@ -1,6 +1,7 @@
 import { Substitution } from "./substitution";
 import { Term, VariableTerm } from "./term";
 import { Equation, Unifier } from "./unify";
+import * as fs from 'fs';
 
 // Helper: Collect all variable names in a term
 function collectVariables(term: Term, vars = new Set<string>()) {
@@ -166,4 +167,63 @@ function areTwoTermsEqualOrRenamed(term1: Term, term2: Term): [boolean, Substitu
     return [verdict, substitution];
 }
 
-export { collectVariables, renameVariables, invertMapping, revertRenaming, getNonVariablePositions, getSubtermAt, replaceSubterm, applySubstitution, reduceToNormalForm, areTwoTermsEqualOrRenamed };
+function toCanonicalRuleString(rule: Equation): string {
+    const varMap = new Map<string, string>();
+    let varCount = 0;
+
+    function canonicalizeTerm(term: Term): string {
+        if (term.isVariable) {
+            if (!varMap.has(term.name)) {
+                varMap.set(term.name, `v${varCount++}`);
+            }
+            return varMap.get(term.name)!;
+        }
+        if (term.isConstant) {
+            return term.name;
+        }
+        if (term.isFunction) {
+            return `${term.name}(${term.args.map(canonicalizeTerm).join(', ')})`;
+        }
+        return '';
+    }
+    
+    const left = canonicalizeTerm(rule.left);
+    varMap.clear();
+    varCount = 0;
+    const right = canonicalizeTerm(rule.right);
+    
+    return `${left} -> ${right}`;
+}
+
+function writeCompletedSystemToFile(completedRules: Equation[], convergentSystem: Equation[]) {
+    try {
+        const canonicalSystemRules = new Set(convergentSystem.map(rule => {
+            // Add both normal and inverse canonical forms
+            const normal = toCanonicalRuleString(rule);
+            const inverse = toCanonicalRuleString({ left: rule.right, right: rule.left });
+            return [normal, inverse];
+        }).flat());
+
+        let fileOutput = "# Completed Rule System\n\n";
+
+        const uniqueRules = completedRules.filter((rule, index, self) =>
+            index === self.findIndex((r) => (
+                r.left.toString() === rule.left.toString() && r.right.toString() === rule.right.toString()
+            ))
+        );
+
+        for (const rule of uniqueRules) {
+            const ruleString = `${rule.left.toString()} -> ${rule.right.toString()}`;
+            const canonicalRule = toCanonicalRuleString(rule);
+            const checkmark = canonicalSystemRules.has(canonicalRule) ? ' ✅' : '';
+            fileOutput += `${ruleString}${checkmark}\n`;
+        }
+
+        fs.writeFileSync('completed_system.txt', fileOutput);
+        console.log('\nSuccessfully wrote the completed system to completed_system.txt');
+    } catch (error) {
+        console.error('\nFailed to write system to file:', error);
+    }
+}
+
+export { collectVariables, renameVariables, invertMapping, revertRenaming, getNonVariablePositions, getSubtermAt, replaceSubterm, applySubstitution, reduceToNormalForm, areTwoTermsEqualOrRenamed, toCanonicalRuleString, writeCompletedSystemToFile };

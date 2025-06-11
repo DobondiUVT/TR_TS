@@ -1,3 +1,0 @@
-<f(f(x, f(y, z)), z), f(f(x, y), f(z, z))>
-<f(x, y), f(x, f(y, 1))>
-<f(x, z), f(x, f(1, z))>

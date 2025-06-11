@@ -31,7 +31,7 @@ export class FunctionTerm extends Term {
         if (!(name in TERM_RULES.functions)) {
             throw new Error(`Invalid function name: ${name}`);
         }
-        if (TERM_RULES.functions[name] !== args.length) {
+        if (TERM_RULES.functions[name].arity !== args.length) {
             throw new Error(`Invalid number of arguments for function ${name}, expected ${TERM_RULES.functions[name]}, got ${args.length}`);
         }
     }
