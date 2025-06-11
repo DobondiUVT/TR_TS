@@ -26,3 +26,5 @@ export const ORDERING_RULES = {
       "i": 3,
     },
   }
+
+  export type OrderingRules = typeof ORDERING_RULES;

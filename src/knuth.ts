@@ -1,21 +1,25 @@
 import { Term, FunctionTerm } from './term';
-import { ORDERING_RULES } from './config';
+import { ORDERING_RULES, OrderingRules } from './config';
 import { Equation } from './unify';
 
-export class KnuthBendixOrdering {        
+export class KnuthBendixOrdering {
+    // constructor that can take custom ordering rules
+    constructor(private orderingRules: OrderingRules = ORDERING_RULES) {
+    }
+    
     // Calculate the weight of a term
-    private static calculateWeight(term: Term): number {
+    private calculateWeight(term: Term): number {
         if (term.isVariable) {
-            return ORDERING_RULES.weights.variables || 1;
+            return this.orderingRules.weights.variables || 1;
         }
         
         if (term.isConstant) {
-            return ORDERING_RULES.weights.functions[term.name as keyof typeof ORDERING_RULES.weights.functions] || 1;
+            return this.orderingRules.weights.functions[term.name as keyof typeof this.orderingRules.weights.functions] || 1;
         }
         
         if (term.isFunction) {
             const functionTerm = term as FunctionTerm;
-            const functionWeight = ORDERING_RULES.weights.functions[term.name as keyof typeof ORDERING_RULES.weights.functions] || 1;
+            const functionWeight = this.orderingRules.weights.functions[term.name as keyof typeof this.orderingRules.weights.functions] || 1;
             
             // Weight of function = weight of function symbol + sum of weights of arguments
             const argsWeight = functionTerm.args.reduce((sum, arg) => sum + this.calculateWeight(arg), 0);
@@ -26,7 +30,7 @@ export class KnuthBendixOrdering {
     }
 
     // Count occurrences of each variable in a term
-    private static countVariables(term: Term): Map<string, number> {
+    private countVariables(term: Term): Map<string, number> {
         const counts = new Map<string, number>();
         
         if (term.isVariable) {
@@ -45,7 +49,7 @@ export class KnuthBendixOrdering {
     }
 
     // Check if variable counts of t1 are greater than or equal to t2
-    private static variableCondition(t1: Term, t2: Term): boolean {
+    private variableCondition(t1: Term, t2: Term): boolean {
         const counts1 = this.countVariables(t1);
         const counts2 = this.countVariables(t2);
         
@@ -61,14 +65,14 @@ export class KnuthBendixOrdering {
     }
 
     // Compare function symbols by precedence (higher precedence = greater)
-    private static compareFunctionPrecedence(f1: string, f2: string): number {
-        const precedence1 = ORDERING_RULES.precedence[f1 as keyof typeof ORDERING_RULES.precedence] || 0;
-        const precedence2 = ORDERING_RULES.precedence[f2 as keyof typeof ORDERING_RULES.precedence] || 0;
+    private compareFunctionPrecedence(f1: string, f2: string): number {
+        const precedence1 = this.orderingRules.precedence[f1 as keyof typeof this.orderingRules.precedence] || 0;
+        const precedence2 = this.orderingRules.precedence[f2 as keyof typeof this.orderingRules.precedence] || 0;
         return precedence1 - precedence2;
     }
 
     // Lexicographic comparison of argument lists
-    private static lexicographicCompare(args1: Term[], args2: Term[]): number {
+    private lexicographicCompare(args1: Term[], args2: Term[]): number {
         const minLength = Math.min(args1.length, args2.length);
         
         for (let i = 0; i < minLength; i++) {
@@ -82,7 +86,7 @@ export class KnuthBendixOrdering {
     }
 
     // Main KBO comparison function
-    public static compare(t1: Term, t2: Term): number {
+    public compare(t1: Term, t2: Term): number {
         const weight1 = this.calculateWeight(t1);
         const weight2 = this.calculateWeight(t2);
 
@@ -143,26 +147,26 @@ export class KnuthBendixOrdering {
     }
 
     // Check if t1 is strictly greater than t2 in KBO
-    public static greaterThan(t1: Term, t2: Term): boolean {
+    public greaterThan(t1: Term, t2: Term): boolean {
         return this.compare(t1, t2) > 0;
     }
 
     // Check if t1 is strictly less than t2 in KBO
-    public static lessThan(t1: Term, t2: Term): boolean {
+    public lessThan(t1: Term, t2: Term): boolean {
         return this.compare(t1, t2) < 0;
     }
 
     // Check if t1 equals t2 in KBO
-    public static equal(t1: Term, t2: Term): boolean {
+    public equal(t1: Term, t2: Term): boolean {
         return this.compare(t1, t2) === 0;
     }
 
-    public static applyOrdering(equations: Equation[]): Equation[] {
+    public applyOrdering(equations: Equation[]): Equation[] {
         return equations.sort((a, b) => this.compare(a.left, b.left));
     }
 
     // Enhanced example demonstrating proper KBO behavior
-    public static example(): void {
+    public example(): void {
         console.log('Knuth-Bendix Ordering Examples:');
         console.log('=====================================');
         

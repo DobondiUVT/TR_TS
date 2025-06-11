@@ -3,6 +3,7 @@ import { Equation } from "./unify";
 import { KnuthBendixOrdering } from "./knuth";
 import { CriticalPair } from "./critical";
 import { getTermComplexity, reduceToNormalForm, areTwoTermsEqualOrRenamed } from "./helpers";
+import { ORDERING_RULES, OrderingRules } from "./config";
 
 const MAX_TERM_COMPLEXITY = 8;
 
@@ -10,16 +11,18 @@ export class Completion {
     private rules: Equation[];
     private criticalPairFinder: CriticalPairFinder;
     private rulesAnalyzed: Set<string>;
+    private orderingRules: OrderingRules;
 
-    constructor(initialRules: Equation[]) {
-        this.rules = [...initialRules].map(this.orientEquation);
+    constructor(initialRules: Equation[], orderingRules: OrderingRules = ORDERING_RULES) {
+        this.orderingRules = orderingRules;
+        this.rules = [...initialRules].map(eq => this.orientEquation(eq, orderingRules));
         this.simplifyRuleSet();
         this.criticalPairFinder = new CriticalPairFinder(this.rules);
         this.rulesAnalyzed = new Set<string>();
     }
 
-    private orientEquation(eq: Equation): Equation {
-        const order = KnuthBendixOrdering.compare(eq.left, eq.right);
+    private orientEquation(eq: Equation, orderingRules: OrderingRules = this.orderingRules): Equation {
+        const order = new KnuthBendixOrdering(orderingRules).compare(eq.left, eq.right);
         if (order > 0) {
             return eq;
         }
@@ -123,7 +126,7 @@ export class Completion {
 
     public complete(): Equation[] {
         let iterations = 0;
-        const max_iterations = 20; // Increased iterations for this strategy
+        const max_iterations = 100; // Increased iterations for this strategy
         
         console.log(`Starting completion with ${this.rules.length} initial rules.`);
         
@@ -183,8 +186,6 @@ export class Completion {
                 console.log(`Rule ${sysRule.left.toString()} -> ${sysRule.right.toString()} ✅`);
             } else {
                 console.log(`Rule ${sysRule.left.toString()} -> ${sysRule.right.toString()} ❌`);
-                console.log(`   ${sysRule.left.toString()} reduces to ${leftNormal.toString()}`);
-                console.log(`   ${sysRule.right.toString()} reduces to ${rightNormal.toString()}`);
             }
         }
     }

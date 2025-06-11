@@ -195,7 +195,7 @@ function toCanonicalRuleString(rule: Equation): string {
     return `${left} -> ${right}`;
 }
 
-function writeCompletedSystemToFile(completedRules: Equation[], convergentSystem: Equation[]) {
+function writeCompletedSystemToFile(completedRules: Equation[], convergentSystem: Equation[], filename: string) {
     try {
         const canonicalSystemRules = new Set(convergentSystem.map(rule => {
             // Add both normal and inverse canonical forms
@@ -219,8 +219,8 @@ function writeCompletedSystemToFile(completedRules: Equation[], convergentSystem
             fileOutput += `${ruleString}${checkmark}\n`;
         }
 
-        fs.writeFileSync('completed_system.txt', fileOutput);
-        console.log('\nSuccessfully wrote the completed system to completed_system.txt');
+        fs.writeFileSync(filename, fileOutput);
+        console.log(`\nSuccessfully wrote the completed system to ${filename}`);
     } catch (error) {
         console.error('\nFailed to write system to file:', error);
     }

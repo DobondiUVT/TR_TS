@@ -16,6 +16,21 @@ export const initialAxioms: Equation[] = [
     },
 ];
 
+export const secondaryAxioms: Equation[] = [
+    {
+        left: new Parser('(x * y) * z').parse(),
+        right: new Parser('x * (y * z)').parse()
+    },
+    {
+        left: new Parser('x * i(x)').parse(),
+        right: new Parser('1').parse()
+    },
+    {
+        left: new Parser('1 * x').parse(),
+        right: new Parser('x').parse()
+    },
+];
+
 export const convergentSystem: Equation[] = [
     {
         left: new Parser('(x * y) * z').parse(),
