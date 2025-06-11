@@ -83,41 +83,18 @@ export class KnuthBendixOrdering {
 
     // Main KBO comparison function
     public static compare(t1: Term, t2: Term): number {
-        // KBO Rule 1: Weight comparison
         const weight1 = this.calculateWeight(t1);
         const weight2 = this.calculateWeight(t2);
-        
+
         if (weight1 > weight2) {
-            // t1 > t2 only if variable condition is satisfied
-            return this.variableCondition(t1, t2) ? 1 : 0;
+            return this.variableCondition(t1, t2) ? 1 : 0; // t1 > t2 if vars in t2 are in t1
         }
-        
         if (weight1 < weight2) {
-            // t2 > t1 only if variable condition is satisfied
-            return this.variableCondition(t2, t1) ? -1 : 0;
+            return this.variableCondition(t2, t1) ? -1 : 0; // t2 > t1 if vars in t1 are in t2
         }
-        
-        // Weights are equal, proceed to other comparisons
-        
-        // If both are variables
-        if (t1.isVariable && t2.isVariable) {
-            return t1.name.localeCompare(t2.name);
-        }
-        
-        // If both are constants
-        if (t1.isConstant && t2.isConstant) {
-            return this.compareFunctionPrecedence(t1.name, t2.name);
-        }
-        
-        // If one is variable and other is not (with equal weights, this shouldn't happen in proper KBO)
-        if (t1.isVariable && !t2.isVariable) {
-            return -1; // Variables are typically smaller when weights are equal
-        }
-        
-        if (!t1.isVariable && t2.isVariable) {
-            return 1;
-        }
-        
+
+        // --- Weights are equal, use precedence or lexicographic comparison ---
+
         // If both are functions with equal weights
         if (t1.isFunction && t2.isFunction) {
             const functionTerm1 = t1 as FunctionTerm;
@@ -134,16 +111,32 @@ export class KnuthBendixOrdering {
                 return this.lexicographicCompare(functionTerm1.args, functionTerm2.args);
             }
             
-            return precedenceComparison;
+            return 0; // Incomparable if same weight, same precedence, different function
         }
         
-        // Mixed cases (function vs constant/variable with equal weights)
-        if (t1.isFunction && !t2.isFunction) {
-            return 1;
+        // --- Cases for equal weights involving variables or constants ---
+
+        // If one is a variable and the other is not, the variable is greater.
+        if (t1.isVariable && !t2.isVariable) return 1;
+        if (!t1.isVariable && t2.isVariable) return -1;
+
+        // If both are variables
+        if (t1.isVariable && t2.isVariable) {
+            return t1.name.localeCompare(t2.name);
         }
         
-        if (!t1.isFunction && t2.isFunction) {
-            return -1;
+        // If both are constants
+        if (t1.isConstant && t2.isConstant) {
+            return this.compareFunctionPrecedence(t1.name, t2.name);
+        }
+
+        // Mixed cases (function vs constant with equal weights)
+        if (t1.isFunction && t2.isConstant) {
+            return this.compareFunctionPrecedence(t1.name, t2.name);
+        }
+        
+        if (t1.isConstant && t2.isFunction) {
+            return this.compareFunctionPrecedence(t1.name, t2.name);
         }
         
         return 0; // Equal

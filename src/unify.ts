@@ -53,15 +53,40 @@ export class Unifier {
     private tryEliminate(equations: Equation[]): Equation[] | null {
         for (let i = 0; i < equations.length; i++) {
             const eq = equations[i];
-            if (eq.left.isVariable && !this.containsVariable(eq.right, eq.left.name)) {
-                // Substitute everywhere
+            
+            // Orient if necessary, so we have a variable on the left
+            if (!eq.left.isVariable && eq.right.isVariable) {
+                const temp = eq.left;
+                eq.left = eq.right;
+                eq.right = temp;
+            }
+
+            if (eq.left.isVariable) {
+                // Occurs check: variable must not be in the other term
+                if (this.containsVariable(eq.right, eq.left.name)) {
+                    // This would lead to an infinite loop, so it's a failure.
+                    // For simplicity, we'll just stop this path. In a more robust
+                    // unifier, this would explicitly fail the unification.
+                    continue; 
+                }
+
+                const s: Substitution = new Substitution();
+                s.set(eq.left.name, eq.right);
+
+                // Substitute everywhere else, including the rest of the equations
+                const otherEquations = equations.filter((_, idx) => idx !== i);
+                const newEquations = otherEquations.map(otherEq => ({
+                    left: applySubstitution(otherEq.left, s),
+                    right: applySubstitution(otherEq.right, s)
+                }));
+                
+                // Also apply substitution to our own substitution map
+                for (const [key, value] of this.substitution.entries()) {
+                    this.substitution.set(key, applySubstitution(value, s));
+                }
+                
                 this.substitution.set(eq.left.name, eq.right);
-                const newEquations = equations
-                    .filter((_, idx) => idx !== i)
-                    .map(eq2 => ({
-                        left: applySubstitution(eq2.left, this.substitution),
-                        right: applySubstitution(eq2.right, this.substitution)
-                    }));
+                
                 this.addStep('Eliminate', equations, eq, newEquations);
                 return newEquations;
             }
@@ -130,20 +155,52 @@ export class Unifier {
 
     unify(): boolean {
         let current = [...this.equations];
-        while (true) {
-            let result: Equation[] | null = null;
-            // Apply rules in the order: Eliminate, Decompose, Delete, Orient
-            result = this.tryEliminate(current);
-            if (result) { current = result; continue; }
-            result = this.tryDecompose(current);
-            if (result) { current = result; continue; }
-            result = this.tryDelete(current);
-            if (result) { current = result; continue; }
-            result = this.tryOrient(current);
-            if (result) { current = result; continue; }
-            break;
+        while (current.length > 0) {
+            let changed = false;
+            
+            // Rule 1: Delete
+            const initialLength = current.length;
+            current = current.filter(eq => eq.left.toString() !== eq.right.toString());
+            if (current.length < initialLength) changed = true;
+            
+            // Rule 2: Decompose
+            const decomposed = this.tryDecompose(current);
+            if (decomposed) {
+                current = decomposed;
+                changed = true;
+            }
+
+            // Rule 3: Orient
+            current.forEach(eq => {
+                if (!eq.left.isVariable && eq.right.isVariable) {
+                    const temp = eq.left;
+                    eq.left = eq.right;
+                    eq.right = temp;
+                    changed = true;
+                }
+            });
+
+            // Rule 4: Eliminate
+            const eliminated = this.tryEliminate(current);
+            if (eliminated) {
+                current = eliminated;
+                changed = true;
+            }
+
+            if (!changed) break; // No more rules applied, exit loop.
         }
-        return this.isSolvedForm(current);
+        
+        // Final check for solved form and update substitution
+        if (this.isSolvedForm(current)) {
+            current.forEach(eq => {
+                if (eq.left.isVariable) {
+                    this.substitution.set(eq.left.name, eq.right);
+                }
+            });
+            return true;
+        }
+
+        return false;
     }
 
     getSteps(): UnificationStep[] {

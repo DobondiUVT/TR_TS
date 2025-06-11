@@ -107,28 +107,55 @@ function reduceToNormalForm(term: Term, rules: Equation[]): Term {
     return current;
 }
 
+function match(pattern: Term, term: Term, substitution: Substitution): boolean {
+    if (pattern.isVariable) {
+        if (substitution.has(pattern.name)) {
+            return substitution.get(pattern.name)!.toString() === term.toString();
+        } else {
+            substitution.set(pattern.name, term);
+            return true;
+        }
+    }
+
+    if (pattern.isFunction && term.isFunction && pattern.name === term.name && pattern.args.length === term.args.length) {
+        for (let i = 0; i < pattern.args.length; i++) {
+            if (!match(pattern.args[i], term.args[i], substitution)) {
+                return false;
+            }
+        }
+        return true;
+    }
+    
+    return pattern.toString() === term.toString();
+}
+
 function reduceOneStep(term: Term, rules: Equation[]): Term {
-    // Try to apply each rule at the root
     for (const rule of rules) {
-        const unifier = new Unifier([{ left: term, right: rule.left }]);
-        if (unifier.unify()) {
-            const substitution = unifier.getSubstitution();
+        const substitution = new Substitution();
+        if (match(rule.left, term, substitution)) {
             return applySubstitution(rule.right, substitution);
         }
     }
-    
-    // If no rule applies at root, try to reduce subterms
-    if (term.name && term.args && term.args.length > 0) {
+
+    if (term.isFunction) {
         const reducedArgs = term.args.map(arg => reduceOneStep(arg, rules));
-        // Check if any argument was reduced
-        const argsChanged = reducedArgs.some((arg, i) => arg.toString() !== term.args![i].toString());
-        if (argsChanged) {
+        if (reducedArgs.some((arg, i) => arg.toString() !== term.args[i].toString())) {
             return Term.create(term.name, reducedArgs);
         }
     }
-    
-    // No reduction possible
+
     return term;
+}
+
+export function getTermComplexity(term: Term): number {
+    if (term.isVariable || term.isConstant) {
+        return 1;
+    }
+    if (term.isFunction) {
+        // Complexity is 1 (for the function symbol) + sum of complexities of arguments
+        return 1 + term.args.reduce((sum, arg) => sum + getTermComplexity(arg), 0);
+    }
+    return 1; // Fallback for any other case
 }
 
 function areTwoTermsEqualOrRenamed(term1: Term, term2: Term): [boolean, Substitution] {

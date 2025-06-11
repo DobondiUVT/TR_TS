@@ -14,15 +14,15 @@ export const ORDERING_RULES = {
       variables: 1,
       functions: {
         "*": 1,
-        "i": 1,
+        "i": 2,
       },
       constants: {
         "1": 1,
       }
     },
     precedence: {
+      "1": 1,
       "i": 2,
       "*": 3,
-      "1": 4,
     },
   }
