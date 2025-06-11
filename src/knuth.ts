@@ -164,45 +164,4 @@ export class KnuthBendixOrdering {
     public applyOrdering(equations: Equation[]): Equation[] {
         return equations.sort((a, b) => this.compare(a.left, b.left));
     }
-
-    // Enhanced example demonstrating proper KBO behavior
-    public example(): void {
-        console.log('Knuth-Bendix Ordering Examples:');
-        console.log('=====================================');
-        
-        // Create example terms
-        const x = Term.create('x'); // variable
-        const y = Term.create('y'); // variable
-        const a = Term.create('a'); // constant
-        const b = Term.create('b'); // constant
-        const f_a_b = Term.create('f', [a, b]); // f(a,b)
-        const f_x_y = Term.create('f', [x, y]); // f(x,y)
-        const g_a = Term.create('g', [a]); // g(a)
-        const f_f_a_b = Term.create('f', [f_a_b, b]); // f(f(a,b),b)
-        
-        // Display weights for understanding
-        console.log('Term weights:');
-        console.log(`  x: ${this.calculateWeight(x)}`);
-        console.log(`  a: ${this.calculateWeight(a)}`);
-        console.log(`  f(a,b): ${this.calculateWeight(f_a_b)}`);
-        console.log(`  f(x,y): ${this.calculateWeight(f_x_y)}`);
-        console.log(`  f(f(a,b),b): ${this.calculateWeight(f_f_a_b)}`);
-        console.log();
-        
-        // Test comparisons
-        const comparisons = [
-            ['f(f(a,b),b)', 'f(a,b)', f_f_a_b, f_a_b],
-            ['f(a,b)', 'f(x,y)', f_a_b, f_x_y],
-            ['f(a,b)', 'g(a)', f_a_b, g_a],
-            ['g(a)', 'a', g_a, a],
-            ['f(x,y)', 'f(a,b)', f_x_y, f_a_b],
-            ['x', 'a', x, a],
-        ];
-        
-        for (const [name1, name2, term1, term2] of comparisons) {
-            const result = this.compare(term1 as Term, term2 as Term);
-            const relation = result > 0 ? '>' : result < 0 ? '<' : '=';
-            console.log(`${name1} ${relation} ${name2}`);
-        }
-    }
 }

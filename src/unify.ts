@@ -62,11 +62,7 @@ export class Unifier {
             }
 
             if (eq.left.isVariable) {
-                // Occurs check: variable must not be in the other term
                 if (this.containsVariable(eq.right, eq.left.name)) {
-                    // This would lead to an infinite loop, so it's a failure.
-                    // For simplicity, we'll just stop this path. In a more robust
-                    // unifier, this would explicitly fail the unification.
                     continue; 
                 }
 
@@ -109,34 +105,6 @@ export class Unifier {
                     ...equations.slice(i + 1)
                 ];
                 this.addStep('Decompose', equations, eq, newEquations);
-                return newEquations;
-            }
-        }
-        return null;
-    }
-
-    private tryDelete(equations: Equation[]): Equation[] | null {
-        for (let i = 0; i < equations.length; i++) {
-            const eq = equations[i];
-            if (eq.left.toString() === eq.right.toString()) {
-                const newEquations = equations.filter((_, idx) => idx !== i);
-                this.addStep('Delete', equations, eq, newEquations);
-                return newEquations;
-            }
-        }
-        return null;
-    }
-
-    private tryOrient(equations: Equation[]): Equation[] | null {
-        for (let i = 0; i < equations.length; i++) {
-            const eq = equations[i];
-            if (!eq.left.isVariable && eq.right.isVariable) {
-                const newEquations = [
-                    ...equations.slice(0, i),
-                    { left: eq.right, right: eq.left },
-                    ...equations.slice(i + 1)
-                ];
-                this.addStep('Orient', equations, eq, newEquations);
                 return newEquations;
             }
         }
@@ -209,23 +177,5 @@ export class Unifier {
 
     getSubstitution(): Substitution {
         return this.substitution;
-    }
-
-    printSteps(): void {
-        console.log("Unification Steps:");
-        this.steps.forEach((step, index) => {
-            console.log(`\nStep ${index + 1}:`);
-            console.log(`Rule: ${step.rule}`);
-            console.log(`Before: ${step.before}`);
-            console.log(`Applied to: ${step.equation}`);
-            console.log(`After: ${step.after}`);
-            if (step.substitution && step.substitution.size > 0) {
-                console.log("Substitution:",
-                    Array.from(step.substitution.entries())
-                        .map(([k, v]) => `${k} → ${v.toString()}`)
-                        .join(", ")
-                );
-            }
-        });
     }
 } 

@@ -1,7 +1,7 @@
 import { Equation, Unifier } from './unify';
-import { Term, VariableTerm } from './term';
+import { Term } from './term';
 import { Substitution } from './substitution';
-import { collectVariables, renameVariables, invertMapping, revertRenaming, getNonVariablePositions, getSubtermAt, replaceSubterm, applySubstitution, reduceToNormalForm } from './helpers';
+import { collectVariables, renameVariables, invertMapping, revertRenaming, getNonVariablePositions, getSubtermAt, replaceSubterm, applySubstitution } from './helpers';
 
 
 export interface CriticalPair {
@@ -11,7 +11,6 @@ export interface CriticalPair {
     rule2: Equation;
     substitution: Substitution;
     criticalPair: [Term, Term];
-    termWithCriticalPairs: Term;
 }
 
 export class CriticalPairFinder {
@@ -42,9 +41,8 @@ export class CriticalPairFinder {
                     const unifier = new Unifier([{ left: subterm, right: lj_ }]);
                     if (unifier.unify()) {
                         const subst = unifier.getSubstitution();
-                        // left_side: Replace(li, p, rj'), then apply subst
                         const replaced = replaceSubterm(li, p, rj_);
-                        let full_term = applySubstitution(li, subst);
+                        // left_side: Replace(li, p, rj'), then apply subst
                         let left_side = applySubstitution(replaced, subst);
                         // right_side: Apply subst to ri
                         let right_side = applySubstitution(ri, subst);
@@ -52,9 +50,8 @@ export class CriticalPairFinder {
                         left_side = revertRenaming(left_side, invMapping);
                         right_side = revertRenaming(right_side, invMapping);
                         
-                        // Filter out trivial critical pairs (where both sides reduce to the same normal form)
+                        // Filter out trivial critical pairs
                         if (left_side.toString() !== right_side.toString()) {
-                            // Check if the reverse pair already exists (using reduced forms)
                             const exists = CP.some(pair => 
                                 (pair.criticalPair[0].toString() === right_side.toString() &&
                                  pair.criticalPair[1].toString() === left_side.toString())
@@ -62,7 +59,6 @@ export class CriticalPairFinder {
                             
                             if (!exists) {
                                 CP.push({
-                                    termWithCriticalPairs: full_term,
                                     overlapPosition: p,
                                     overlapTerm: subterm,
                                     rule1: { left: li, right: ri },
